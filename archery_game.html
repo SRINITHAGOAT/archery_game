@@ -1,0 +1,896 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e9eee5">
+  <title>Fieldcraft — Archery Range</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #25352b;
+      --muted: #748073;
+      --paper: #e9eee5;
+      --signal: #ba5a3b;
+      --line: rgba(37, 53, 43, .2);
+      font-family: "DM Mono", monospace;
+      font-synthesis: none;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--paper);
+      color: var(--ink);
+    }
+
+    button { font: inherit; color: inherit; }
+
+    .range {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      isolation: isolate;
+      background: #dce8df;
+    }
+
+    #scene {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .grain {
+      position: absolute;
+      z-index: 1;
+      inset: 0;
+      pointer-events: none;
+      opacity: .14;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.86' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath filter='url(%23n)' opacity='.21' d='M0 0h180v180H0z'/%3E%3C/svg%3E");
+    }
+
+    .topbar, .side-readout, .bottom-bar {
+      position: absolute;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .topbar {
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 26px 34px;
+    }
+
+    .wordmark {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .mark {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border: 1px solid var(--ink);
+      border-radius: 50%;
+      font-family: "Playfair Display", serif;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .wordmark small, .eyebrow, .metric-label, .bottom-bar {
+      color: var(--muted);
+      font-size: 9px;
+      letter-spacing: .13em;
+      line-height: 1.7;
+      text-transform: uppercase;
+    }
+
+    .brand-copy { display: grid; gap: 2px; }
+    .brand-copy small { font-size: 8px; }
+
+    .round-info {
+      display: flex;
+      align-items: center;
+      gap: 25px;
+      pointer-events: auto;
+    }
+
+    .metric { display: grid; gap: 3px; text-align: right; }
+    .metric-label { font-size: 8px; }
+    .metric-value { font-family: "Playfair Display", serif; font-size: 21px; line-height: 1; }
+
+    .reset {
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      background: rgba(245, 247, 241, .55);
+      cursor: pointer;
+      font-size: 9px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      transition: background .18s, border-color .18s;
+    }
+
+    .reset:hover { border-color: var(--ink); background: rgba(245, 247, 241, .9); }
+
+    .side-readout {
+      top: 50%;
+      left: 34px;
+      display: grid;
+      gap: 24px;
+      transform: translateY(-42%);
+    }
+
+    .side-readout > div { display: grid; gap: 6px; }
+    .eyebrow { font-size: 8px; }
+    .readout-value { font-family: "Playfair Display", serif; font-size: 23px; }
+    .wind-line { display: flex; align-items: center; gap: 7px; font-size: 11px; }
+    .wind-arrow { color: var(--signal); font-size: 18px; line-height: 1; }
+    .wind-direction { color: var(--muted); font-size: 8px; letter-spacing: .08em; }
+
+    .draw-meter {
+      position: absolute;
+      z-index: 2;
+      bottom: 65px;
+      left: 50%;
+      width: min(210px, 42vw);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 5px);
+      transition: opacity .16s, transform .16s;
+    }
+
+    .draw-meter.active { opacity: 1; transform: translate(-50%, 0); }
+    .draw-meter-label { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    .draw-meter-label span { color: var(--paper); font-size: 8px; letter-spacing: .11em; text-shadow: 0 1px 5px rgba(25, 37, 29, .55); }
+    .draw-track { height: 3px; overflow: hidden; background: rgba(245, 247, 241, .55); }
+    .draw-fill { display: block; width: 18%; height: 100%; background: var(--signal); transition: width .05s linear; }
+
+    .bottom-bar {
+      right: 34px;
+      bottom: 24px;
+      left: 34px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .instructions { color: var(--ink); font-size: 9px; letter-spacing: .09em; }
+    .instructions span { color: var(--signal); }
+    .shot-count { text-align: right; white-space: nowrap; }
+    .shot-dots { display: flex; justify-content: flex-end; gap: 5px; margin-top: 6px; }
+    .shot-dots i { width: 13px; height: 3px; background: rgba(37, 53, 43, .2); }
+    .shot-dots i.used { background: var(--signal); }
+
+    .reticle {
+      position: absolute;
+      z-index: 3;
+      display: none;
+      width: 25px;
+      height: 25px;
+      border: 1px solid rgba(255, 255, 255, .92);
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px rgba(37, 53, 43, .22), inset 0 0 0 1px rgba(37, 53, 43, .2);
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+    }
+
+    .reticle::before, .reticle::after {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 5px;
+      height: 1px;
+      background: white;
+      content: "";
+      transform: translate(-50%, -50%);
+    }
+
+    .reticle::after { transform: translate(-50%, -50%) rotate(90deg); }
+
+    .toast {
+      position: absolute;
+      z-index: 4;
+      top: 22%;
+      left: 50%;
+      color: #f7f4e9;
+      font-family: "Playfair Display", serif;
+      font-size: clamp(27px, 4vw, 43px);
+      opacity: 0;
+      pointer-events: none;
+      text-shadow: 0 2px 12px rgba(31, 43, 35, .32);
+      transform: translate(-50%, 8px);
+      transition: opacity .22s, transform .22s;
+    }
+
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .drawn .instructions { color: var(--signal); }
+
+    @media (max-width: 600px) {
+      .topbar { padding: 18px 17px; }
+      .round-info { gap: 13px; }
+      .reset { min-height: 32px; padding: 0 9px; font-size: 8px; }
+      .side-readout { top: auto; bottom: 95px; left: 18px; gap: 12px; transform: none; }
+      .side-readout > div { gap: 2px; }
+      .readout-value { font-size: 18px; }
+      .wind-line { gap: 5px; font-size: 10px; }
+      .draw-meter { bottom: 73px; }
+      .bottom-bar { right: 17px; bottom: 15px; left: 17px; align-items: flex-end; }
+      .instructions { max-width: 210px; font-size: 8px; }
+      .shot-dots { gap: 3px; }
+      .shot-dots i { width: 9px; }
+      .metric-value { font-size: 18px; }
+      .brand-copy small { font-size: 7px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: .01ms !important; }
+    }
+  </style>
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js"}}
+  </script>
+</head>
+<body>
+  <main class="range" id="range">
+    <canvas id="scene" aria-label="3D archery range. Drag to aim, hold to draw, and release to fire."></canvas>
+    <div class="grain" aria-hidden="true"></div>
+    <header class="topbar">
+      <div class="wordmark">
+        <span class="mark">F</span>
+        <span class="brand-copy">Fieldcraft<small>Archery range / 01</small></span>
+      </div>
+      <div class="round-info">
+        <div class="metric"><span class="metric-label">Total score</span><span class="metric-value" id="score">00</span></div>
+        <div class="metric"><span class="metric-label">Best round</span><span class="metric-value" id="best">00</span></div>
+        <button class="reset" id="reset" type="button" title="Start a new round (R)">New round</button>
+      </div>
+    </header>
+    <aside class="side-readout" aria-live="polite">
+      <div><span class="eyebrow">Last arrow</span><span class="readout-value" id="last-score">--</span></div>
+      <div><span class="eyebrow">Crosswind</span><span class="wind-line"><span class="wind-arrow" id="wind-arrow">→</span><span id="wind-value">2.4 m/s</span><span class="wind-direction" id="wind-direction">FROM W</span></span></div>
+    </aside>
+    <div class="draw-meter" id="draw-meter" aria-hidden="true">
+      <div class="draw-meter-label"><span>DRAW STRENGTH</span><span id="draw-percent">18%</span></div>
+      <div class="draw-track"><i class="draw-fill" id="draw-fill"></i></div>
+    </div>
+    <div class="reticle" id="reticle" aria-hidden="true"></div>
+    <div class="toast" id="toast" aria-live="polite"></div>
+    <footer class="bottom-bar">
+      <div class="instructions"><span>Drag</span> to aim&nbsp; / &nbsp;<span>hold</span> to draw&nbsp; / &nbsp;<span>release</span> to fire</div>
+      <div class="shot-count"><span id="arrows-label">Arrows · 10</span><div class="shot-dots" id="shot-dots" aria-hidden="true"></div></div>
+    </footer>
+  </main>
+
+  <script type="module">
+    import * as THREE from "three";
+
+    const canvas = document.querySelector("#scene");
+    const range = document.querySelector("#range");
+    const reticle = document.querySelector("#reticle");
+    const toast = document.querySelector("#toast");
+    const scoreLabel = document.querySelector("#score");
+    const lastScoreLabel = document.querySelector("#last-score");
+    const arrowsLabel = document.querySelector("#arrows-label");
+    const shotDots = document.querySelector("#shot-dots");
+    const bestLabel = document.querySelector("#best");
+    const drawMeter = document.querySelector("#draw-meter");
+    const drawFill = document.querySelector("#draw-fill");
+    const drawPercent = document.querySelector("#draw-percent");
+    const targetZ = -8.25;
+    const targetCenterY = 2.28;
+    const maxArrows = 10;
+    const gravity = 9.81;
+    const pointer = new THREE.Vector2();
+    const aimPoint = new THREE.Vector3(0, targetCenterY, targetZ);
+    const clock = new THREE.Clock();
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color("#dce8df");
+    scene.fog = new THREE.Fog("#dce8df", 24, 68);
+
+    const camera = new THREE.PerspectiveCamera(48, 1, .1, 120);
+    camera.position.set(0, 3.05, 11.8);
+    camera.lookAt(0, 2.25, -8.2);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.7));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    scene.add(new THREE.HemisphereLight(0xf5f4e9, 0x637451, 2.0));
+    const sunlight = new THREE.DirectionalLight(0xffe8c6, 3.1);
+    sunlight.position.set(-7, 12, 7);
+    sunlight.castShadow = true;
+    sunlight.shadow.mapSize.set(1024, 1024);
+    sunlight.shadow.camera.left = -24;
+    sunlight.shadow.camera.right = 24;
+    sunlight.shadow.camera.top = 18;
+    sunlight.shadow.camera.bottom = -12;
+    sunlight.shadow.bias = -.0004;
+    scene.add(sunlight);
+
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(200, 200),
+      new THREE.MeshStandardMaterial({ color: 0x73855e, roughness: 1 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -.07;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    function makeHill(x, z, sx, sy, sz, color) {
+      const hill = new THREE.Mesh(
+        new THREE.SphereGeometry(1, 32, 20),
+        new THREE.MeshStandardMaterial({ color, roughness: 1 })
+      );
+      hill.position.set(x, sy * .36, z);
+      hill.scale.set(sx, sy, sz);
+      scene.add(hill);
+    }
+
+    makeHill(-15, -27, 17, 5, 12, 0x8c9b77);
+    makeHill(13, -30, 20, 6, 12, 0x819272);
+    makeHill(0, -39, 25, 8, 13, 0x9eaa82);
+
+    const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x68543e, roughness: 1 });
+    const leafMaterials = [0x506b4c, 0x667950, 0x72845a].map(color =>
+      new THREE.MeshStandardMaterial({ color, roughness: 1 })
+    );
+    function makeTree(x, z, scale = 1, variant = 0) {
+      const tree = new THREE.Group();
+      tree.position.set(x, 0, z);
+      tree.scale.setScalar(scale);
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.12, .2, 1.8, 7), trunkMaterial);
+      trunk.position.y = .9;
+      trunk.castShadow = true;
+      tree.add(trunk);
+      for (let layer = 0; layer < 3; layer++) {
+        const crown = new THREE.Mesh(
+          new THREE.ConeGeometry(1.02 - layer * .17, 1.65, 8),
+          leafMaterials[(variant + layer) % leafMaterials.length]
+        );
+        crown.position.y = 1.75 + layer * .77;
+        crown.castShadow = true;
+        tree.add(crown);
+      }
+      scene.add(tree);
+    }
+
+    [
+      [-8.5, -7, 1.3], [-10.5, -13, 1.65], [-6.7, -17, 1.9],
+      [8.1, -10, 1.45], [11, -16, 1.85], [7.3, -20, 1.55],
+      [-14, -19, 1.8], [15, -22, 1.9], [-12, -4, 1.1], [12.5, -5, 1.15]
+    ].forEach(([x, z, scale], index) => makeTree(x, z, scale, index % 3));
+
+    const board = new THREE.Group();
+    board.position.set(0, targetCenterY, targetZ - .19);
+    scene.add(board);
+
+    function backing(radius, depth, color, zOffset) {
+      const mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, depth, 64),
+        new THREE.MeshStandardMaterial({ color, roughness: .88 })
+      );
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.z = zOffset;
+      mesh.castShadow = true;
+      board.add(mesh);
+      return mesh;
+    }
+
+    function targetZone(radius, color, zOffset) {
+      const mesh = new THREE.Mesh(
+        new THREE.CircleGeometry(radius, 64),
+        new THREE.MeshStandardMaterial({ color, roughness: .82, side: THREE.DoubleSide })
+      );
+      mesh.position.z = zOffset;
+      board.add(mesh);
+    }
+
+    backing(1.53, .2, 0x594b3c, -.08);
+    targetZone(1.40, 0x28372f, .035);
+    targetZone(1.17, 0xf1ead8, .037);
+    targetZone(.95, 0xb95639, .039);
+    targetZone(.73, 0x28372f, .041);
+    targetZone(.50, 0xd6b65c, .043);
+    targetZone(.27, 0xf3ead7, .045);
+    targetZone(.12, 0xb95639, .047);
+
+    for (const boundary of [1.17, .95, .73, .50, .27]) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(boundary, .012, 8, 96),
+        new THREE.MeshStandardMaterial({ color: 0x26362e, roughness: .82 })
+      );
+      ring.position.z = .051;
+      board.add(ring);
+    }
+
+    const targetWood = new THREE.MeshStandardMaterial({ color: 0x76563c, roughness: .8 });
+    const postGeometry = new THREE.BoxGeometry(.13, 4.05, .15);
+    for (const postX of [-1.34, 1.34]) {
+      const post = new THREE.Mesh(postGeometry, targetWood);
+      post.position.set(postX, 1.65 - targetCenterY, -.23);
+      post.castShadow = true;
+      board.add(post);
+    }
+    const crossbar = new THREE.Mesh(new THREE.BoxGeometry(2.82, .13, .15), targetWood);
+    crossbar.position.set(0, -1.48, -.23);
+    crossbar.castShadow = true;
+    board.add(crossbar);
+
+    const pinMaterial = new THREE.MeshStandardMaterial({ color: 0x8d6340, roughness: .9 });
+    for (const pinX of [-1.08, 1.08]) {
+      const pin = new THREE.Mesh(new THREE.SphereGeometry(.055, 12, 10), pinMaterial);
+      pin.position.set(pinX, .87, .064);
+      board.add(pin);
+    }
+
+    const windPost = new THREE.Mesh(
+      new THREE.CylinderGeometry(.035, .06, 3.7, 10),
+      new THREE.MeshStandardMaterial({ color: 0x6c5740, roughness: .75 })
+    );
+    windPost.position.set(1.65, 1.85, -4.1);
+    windPost.castShadow = true;
+    scene.add(windPost);
+
+    const flagWidth = 1.2;
+    const flagHeight = .54;
+    const flagColumns = 6;
+    const flagRows = 3;
+    const flagPositions = new Float32Array(flagColumns * flagRows * 3);
+    const flagUvs = [];
+    const flagIndices = [];
+    for (let row = 0; row < flagRows; row++) {
+      for (let column = 0; column < flagColumns; column++) {
+        flagUvs.push(column / (flagColumns - 1), row / (flagRows - 1));
+        const index = row * flagColumns + column;
+        if (column < flagColumns - 1 && row < flagRows - 1) {
+          flagIndices.push(index, index + 1, index + flagColumns);
+          flagIndices.push(index + 1, index + flagColumns + 1, index + flagColumns);
+        }
+      }
+    }
+    const flagGeometry = new THREE.BufferGeometry();
+    flagGeometry.setAttribute("position", new THREE.BufferAttribute(flagPositions, 3));
+    flagGeometry.setAttribute("uv", new THREE.Float32BufferAttribute(flagUvs, 2));
+    flagGeometry.setIndex(flagIndices);
+    const flagGroup = new THREE.Group();
+    flagGroup.position.set(1.65, 3.45, -4.1);
+    scene.add(flagGroup);
+    const flagMaterial = new THREE.MeshStandardMaterial({ color: 0xc05e40, roughness: .9, side: THREE.DoubleSide });
+    const windFlag = new THREE.Mesh(flagGeometry, flagMaterial);
+    windFlag.castShadow = true;
+    flagGroup.add(windFlag);
+
+    const bow = new THREE.Group();
+    bow.position.set(-1.05, 1.5, 7.6);
+    bow.rotation.z = .32;
+    bow.rotation.y = Math.PI / 2;
+    scene.add(bow);
+
+    const bowWood = new THREE.MeshStandardMaterial({ color: 0x7c563a, roughness: .42, metalness: .08 });
+    const bowWoodDark = new THREE.MeshStandardMaterial({ color: 0x533d2d, roughness: .52, metalness: .12 });
+    const bowGripMaterial = new THREE.MeshStandardMaterial({ color: 0x4a3529, roughness: .9 });
+    const grip = new THREE.Mesh(new THREE.CylinderGeometry(.13, .18, .92, 18), bowGripMaterial);
+    grip.rotation.z = Math.PI / 2;
+    grip.position.set(-.04, 0, .08);
+    bow.add(grip);
+
+    const upperCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(.04, -.96, .02), new THREE.Vector3(-.12, -.78, -.02),
+      new THREE.Vector3(-.28, -.42, -.08), new THREE.Vector3(-.34, 0, -.16),
+      new THREE.Vector3(-.24, .36, -.09), new THREE.Vector3(-.12, .72, -.02),
+      new THREE.Vector3(.04, .96, .02)
+    ]);
+    const lowerCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(.04, .96, -.02), new THREE.Vector3(-.12, .78, .02),
+      new THREE.Vector3(-.28, .42, .08), new THREE.Vector3(-.34, 0, .16),
+      new THREE.Vector3(-.24, -.36, .09), new THREE.Vector3(-.12, -.72, .02),
+      new THREE.Vector3(.04, -.96, -.02)
+    ]);
+    const upperLimb = new THREE.Mesh(new THREE.TubeGeometry(upperCurve, 34, .058, 10, false), bowWood);
+    const lowerLimb = new THREE.Mesh(new THREE.TubeGeometry(lowerCurve, 34, .058, 10, false), bowWood);
+    const upperCore = new THREE.Mesh(new THREE.TubeGeometry(upperCurve, 24, .022, 8, false), bowWoodDark);
+    const lowerCore = new THREE.Mesh(new THREE.TubeGeometry(lowerCurve, 24, .022, 8, false), bowWoodDark);
+    upperLimb.castShadow = true;
+    lowerLimb.castShadow = true;
+    upperCore.castShadow = true;
+    lowerCore.castShadow = true;
+    bow.add(upperLimb, lowerLimb, upperCore, lowerCore);
+
+    const plateLeft = new THREE.Mesh(new THREE.BoxGeometry(.14, 1.5, .06), new THREE.MeshStandardMaterial({ color: 0x836143, roughness: .62 }));
+    const plateRight = plateLeft.clone();
+    plateLeft.position.set(-.16, 0, .12);
+    plateRight.position.set(-.16, 0, -.12);
+    bow.add(plateLeft, plateRight);
+
+    const stringGeometry = new THREE.BufferGeometry();
+    stringGeometry.setAttribute("position", new THREE.Float32BufferAttribute([
+      .04, -.96, .01,
+      -.18, 0, .12,
+      .04, .96, .01
+    ], 3));
+    const bowString = new THREE.Line(stringGeometry, new THREE.LineBasicMaterial({ color: 0xf0e8d4, linewidth: 2 }));
+    bow.add(bowString);
+
+    const stringNock = new THREE.Mesh(
+      new THREE.SphereGeometry(.05, 10, 10),
+      new THREE.MeshStandardMaterial({ color: 0xe9dcc0, roughness: .35, metalness: .22 })
+    );
+    stringNock.position.set(-.18, 0, .12);
+    bow.add(stringNock);
+
+    const bowState = { tension: 0, aimX: 0, aimY: 0 };
+
+    function makeArrow() {
+      const arrow = new THREE.Group();
+      const shaft = new THREE.Mesh(
+        new THREE.CylinderGeometry(.018, .022, 1, 8),
+        new THREE.MeshStandardMaterial({ color: 0x493f32, roughness: .52 })
+      );
+      shaft.rotation.x = Math.PI / 2;
+      shaft.position.z = .5;
+      arrow.add(shaft);
+      const point = new THREE.Mesh(
+        new THREE.ConeGeometry(.045, .17, 8),
+        new THREE.MeshStandardMaterial({ color: 0xb6b2a4, metalness: .42, roughness: .38 })
+      );
+      point.rotation.x = Math.PI / 2;
+      point.position.z = 1.08;
+      arrow.add(point);
+      const fletchMaterial = new THREE.MeshStandardMaterial({ color: 0xb85639, side: THREE.DoubleSide });
+      for (const side of [-1, 1]) {
+        const fletch = new THREE.Mesh(new THREE.PlaneGeometry(.12, .19), fletchMaterial);
+        fletch.position.set(side * .04, 0, .12);
+        fletch.rotation.y = side * .2;
+        arrow.add(fletch);
+      }
+      return arrow;
+    }
+
+    const readyArrow = makeArrow();
+    readyArrow.position.set(bow.position.x + .02, bow.position.y + .03, bow.position.z - .16);
+    scene.add(readyArrow);
+
+    const wind = { value: 2.4, direction: 1 };
+    const hitSparks = [];
+    const sparkGeometry = new THREE.SphereGeometry(.035, 8, 6);
+    const sparkMaterial = new THREE.MeshBasicMaterial({ color: 0xf1d477 });
+    let score = 0;
+    let arrows = maxArrows;
+    let drawing = false;
+    let drawStarted = 0;
+    let flyingArrows = [];
+    let pointerInside = false;
+    let toastTimeout;
+    let lastAimTime = 0;
+
+    const savedBest = Number(localStorage.getItem("fieldcraft-best") || 0);
+    bestLabel.textContent = String(savedBest).padStart(2, "0");
+
+    function updateHud() {
+      scoreLabel.textContent = String(score).padStart(2, "0");
+      arrowsLabel.textContent = `Arrows · ${arrows}`;
+      shotDots.replaceChildren(...Array.from({ length: maxArrows }, (_, index) => {
+        const dot = document.createElement("i");
+        if (index >= arrows) dot.classList.add("used");
+        return dot;
+      }));
+      readyArrow.visible = arrows > 0;
+      if (arrows === 0) showToast(`Round complete · ${score} points`, 2800);
+    }
+
+    function showToast(message, duration = 1250) {
+      clearTimeout(toastTimeout);
+      toast.textContent = message;
+      toast.classList.add("show");
+      toastTimeout = setTimeout(() => toast.classList.remove("show"), duration);
+    }
+
+    function placeAim(event) {
+      const bounds = canvas.getBoundingClientRect();
+      pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+      pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(pointer, camera);
+      const direction = raycaster.ray.direction;
+      const distance = (targetZ - raycaster.ray.origin.z) / direction.z;
+      if (distance > 0) {
+        aimPoint.copy(raycaster.ray.origin).addScaledVector(direction, distance);
+        aimPoint.x = THREE.MathUtils.clamp(aimPoint.x, -1.8, 1.8);
+        aimPoint.y = THREE.MathUtils.clamp(aimPoint.y, .25, 4.25);
+      }
+      reticle.style.left = `${event.clientX}px`;
+      reticle.style.top = `${event.clientY}px`;
+      reticle.style.display = "block";
+      pointerInside = true;
+      lastAimTime = performance.now();
+    }
+
+    function scoreAt(x, y) {
+      const offsetX = x;
+      const offsetY = y - targetCenterY;
+      const radius = Math.hypot(offsetX, offsetY);
+      if (radius > 1.27) return 0;
+      if (radius <= .28) return 10;
+      if (radius <= .58) return 9;
+      if (radius <= .83) return 8;
+      if (radius <= 1.05) return 7;
+      return 6;
+    }
+
+    function burstAt(x, y) {
+      for (let index = 0; index < 7; index++) {
+        const angle = (Math.PI * 2 * index) / 7;
+        const spark = new THREE.Mesh(sparkGeometry, sparkMaterial);
+        spark.position.set(x, y, targetZ - .1);
+        scene.add(spark);
+        hitSparks.push({
+          mesh: spark,
+          velocity: new THREE.Vector3(Math.cos(angle) * .9, Math.sin(angle) * .9, .25),
+          life: .38
+        });
+      }
+    }
+
+    function fire(power) {
+      if (arrows <= 0) return;
+      arrows -= 1;
+      const drawOffset = -.18 - power * .42;
+      const start = new THREE.Vector3(
+        bow.position.x + drawOffset,
+        bow.position.y + .03,
+        bow.position.z - .18
+      );
+      const horizontalDistance = Math.hypot(aimPoint.x - start.x, targetZ - start.z);
+      const speed = 17 + power * 18;
+      const flightTime = horizontalDistance / speed;
+      const velocity = new THREE.Vector3(
+        (aimPoint.x - start.x) / flightTime,
+        (aimPoint.y - start.y + .5 * gravity * flightTime * flightTime) / flightTime,
+        (targetZ - start.z) / flightTime
+      );
+      const arrow = makeArrow();
+      arrow.position.copy(start);
+      arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), velocity.clone().normalize());
+      scene.add(arrow);
+      const trailGeometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(),
+        new THREE.Vector3()
+      ]);
+      const trail = new THREE.Line(
+        trailGeometry,
+        new THREE.LineBasicMaterial({ color: 0xf1d477, transparent: true, opacity: .5 })
+      );
+      scene.add(trail);
+      flyingArrows.push({ arrow, velocity, trail, scored: false });
+      readyArrow.visible = false;
+      const positions = stringGeometry.attributes.position;
+      positions.setY(1, 0);
+      positions.needsUpdate = true;
+      updateHud();
+    }
+
+    function startDraw(event) {
+      if (event.button !== undefined && event.button !== 0) return;
+      placeAim(event);
+      if (arrows <= 0) return;
+      drawing = true;
+      drawStarted = performance.now();
+      range.classList.add("drawn");
+      drawMeter.classList.add("active");
+      canvas.setPointerCapture?.(event.pointerId);
+    }
+
+    function releaseDraw() {
+      if (!drawing) return;
+      drawing = false;
+      range.classList.remove("drawn");
+      const power = THREE.MathUtils.clamp((performance.now() - drawStarted) / 1250, .18, 1);
+      drawMeter.classList.remove("active");
+      fire(power);
+      bowState.tension = 0;
+      if (arrows > 0) readyArrow.visible = true;
+    }
+
+    canvas.addEventListener("pointerdown", startDraw);
+    canvas.addEventListener("pointermove", placeAim);
+    canvas.addEventListener("pointerup", releaseDraw);
+    canvas.addEventListener("pointercancel", releaseDraw);
+    canvas.addEventListener("pointerleave", event => {
+      if (!drawing && event.pointerType === "mouse") {
+        pointerInside = false;
+        reticle.style.display = "none";
+      }
+    });
+
+    function resetRound() {
+      score = 0;
+      arrows = maxArrows;
+      flyingArrows.forEach(({ arrow, trail }) => {
+        scene.remove(arrow);
+        scene.remove(trail);
+      });
+      flyingArrows = [];
+      lastScoreLabel.textContent = "--";
+      updateHud();
+      showToast("A fresh round", 900);
+    }
+
+    document.querySelector("#reset").addEventListener("click", resetRound);
+    window.addEventListener("keydown", event => {
+      if (event.key.toLowerCase() === "r") resetRound();
+      if (event.code === "Space" && !event.repeat && !drawing) {
+        drawing = true;
+        drawStarted = performance.now();
+        range.classList.add("drawn");
+        drawMeter.classList.add("active");
+      }
+    });
+    window.addEventListener("keyup", event => {
+      if (event.code === "Space") releaseDraw();
+    });
+
+    const windValue = document.querySelector("#wind-value");
+    const windArrow = document.querySelector("#wind-arrow");
+    const windDirection = document.querySelector("#wind-direction");
+    function updateWind(time) {
+      wind.value = 2.2 + Math.sin(time * .23) * .9;
+      wind.direction = Math.sin(time * .17) > 0 ? 1 : -1;
+      windValue.textContent = `${wind.value.toFixed(1)} m/s`;
+      windArrow.textContent = wind.direction > 0 ? "→" : "←";
+      windDirection.textContent = wind.direction > 0 ? "FROM W" : "FROM E";
+
+      const positions = flagGeometry.attributes.position;
+      for (let row = 0; row < flagRows; row++) {
+        for (let column = 0; column < flagColumns; column++) {
+          const progress = column / (flagColumns - 1);
+          const index = row * flagColumns + column;
+          const vertical = .27 - (row / (flagRows - 1)) * flagHeight;
+          positions.setXYZ(
+            index,
+            wind.direction * progress * flagWidth,
+            vertical - Math.sin(time * 4 + progress * 6) * progress * .07,
+            Math.sin(time * 3 + progress * 8) * progress * .1
+          );
+        }
+      }
+      positions.needsUpdate = true;
+      flagGeometry.computeVertexNormals();
+    }
+
+    function resize() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      camera.aspect = width / height;
+      camera.fov = width < 600 ? 55 : 48;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height, false);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+    updateHud();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = Math.min(clock.getDelta(), .04);
+      const elapsed = clock.elapsedTime;
+      updateWind(elapsed);
+
+      const aimOffsetX = THREE.MathUtils.clamp((aimPoint.x - bow.position.x) * .32, -.7, .7);
+      const aimOffsetY = THREE.MathUtils.clamp((aimPoint.y - bow.position.y) * .12, -.5, .5);
+      bow.rotation.z = THREE.MathUtils.lerp(bow.rotation.z, .32 + aimOffsetX, .12);
+      bow.rotation.x = THREE.MathUtils.lerp(bow.rotation.x, aimOffsetY * .3, .12);
+
+      const tension = drawing ? THREE.MathUtils.clamp((performance.now() - drawStarted) / 1250, 0, 1) : bowState.tension;
+      bowState.tension = THREE.MathUtils.lerp(bowState.tension, tension, .18);
+      const stringDraw = -0.18 - bowState.tension * .52;
+      const positions = stringGeometry.attributes.position;
+      positions.setXYZ(1, stringDraw, 0, .12);
+      positions.needsUpdate = true;
+      stringNock.position.set(stringDraw, 0, .12);
+      const readyBaseX = bow.position.x + .02 + bowState.tension * .18;
+      readyArrow.position.x = readyBaseX;
+      readyArrow.position.z = bow.position.z - .18 + bowState.tension * .34;
+      readyArrow.position.y = bow.position.y + .03;
+      readyArrow.lookAt(aimPoint);
+
+      bow.rotation.y = THREE.MathUtils.lerp(bow.rotation.y, aimOffsetX * .1, .1);
+      bow.rotation.x = THREE.MathUtils.lerp(bow.rotation.x, aimOffsetY * .25, .1);
+
+      if (pointerInside && !drawing && performance.now() - lastAimTime < 3000) {
+        readyArrow.lookAt(aimPoint);
+      }
+      if (drawing) {
+        const power = .18 + bowState.tension * .82;
+        drawFill.style.width = `${power * 100}%`;
+        drawPercent.textContent = `${Math.round(power * 100)}%`;
+      }
+
+      for (const flight of flyingArrows) {
+        const previousPosition = flight.arrow.position.clone();
+        const previousZ = flight.arrow.position.z;
+        flight.velocity.x += wind.direction * wind.value * .32 * delta;
+        flight.velocity.y -= gravity * delta;
+        flight.arrow.position.addScaledVector(flight.velocity, delta);
+        const direction = flight.velocity.clone().normalize();
+        flight.arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
+
+        if (!flight.scored && previousZ > targetZ && flight.arrow.position.z <= targetZ) {
+          const fraction = (previousZ - targetZ) / (previousZ - flight.arrow.position.z);
+          const impact = previousPosition.lerp(flight.arrow.position, fraction);
+          const points = scoreAt(impact.x, impact.y);
+          flight.scored = true;
+          score += points;
+          lastScoreLabel.textContent = points ? `${points} pts` : "Miss";
+          if (points) burstAt(impact.x, impact.y);
+          const previousBest = Number(localStorage.getItem("fieldcraft-best") || 0);
+          if (score > previousBest) {
+            localStorage.setItem("fieldcraft-best", String(score));
+            bestLabel.textContent = String(score).padStart(2, "0");
+          }
+          updateHud();
+          showToast(points ? `${points} points` : "Just wide");
+          flight.trail.visible = false;
+          flight.velocity.set(0, 0, 0);
+          flight.arrow.position.set(impact.x, impact.y, targetZ - .08);
+        }
+        if (flight.arrow.position.z < targetZ - .12 && flight.scored) flight.velocity.set(0, 0, 0);
+        if (flight.arrow.position.z < -45 || flight.arrow.position.y < -5) {
+          scene.remove(flight.arrow);
+          scene.remove(flight.trail);
+        }
+      }
+      for (const spark of hitSparks) {
+        spark.life -= delta;
+        spark.mesh.position.addScaledVector(spark.velocity, delta);
+        spark.velocity.multiplyScalar(.94);
+        spark.mesh.scale.setScalar(Math.max(0, spark.life / .38));
+        if (spark.life <= 0) scene.remove(spark.mesh);
+      }
+      for (const flight of flyingArrows) {
+        if (flight.trail.visible) {
+          const direction = flight.velocity.clone().normalize();
+          const positions = flight.trail.geometry.attributes.position;
+          positions.setXYZ(0, flight.arrow.position.x, flight.arrow.position.y, flight.arrow.position.z);
+          positions.setXYZ(1,
+            flight.arrow.position.x - direction.x * .75,
+            flight.arrow.position.y - direction.y * .75,
+            flight.arrow.position.z - direction.z * .75
+          );
+          positions.needsUpdate = true;
+        }
+      }
+      hitSparks.splice(0, hitSparks.length, ...hitSparks.filter(spark => spark.life > 0));
+      flyingArrows = flyingArrows.filter(flight => flight.arrow.position.z > -45 && flight.arrow.position.y > -5);
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
