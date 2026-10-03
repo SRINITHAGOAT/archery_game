@@ -279,7 +279,7 @@
     <div class="toast" id="toast" aria-live="polite"></div>
     <footer class="bottom-bar">
       <div class="instructions"><span>Drag</span> to aim&nbsp; / &nbsp;<span>hold</span> to draw&nbsp; / &nbsp;<span>release</span> to fire</div>
-      <div class="shot-count"><span id="arrows-label">Arrows · 10</span><div class="shot-dots" id="shot-dots" aria-hidden="true"></div></div>
+      <div class="shot-count"><span id="arrows-label">Level 01 · 10 left</span><div class="shot-dots" id="shot-dots" aria-hidden="true"></div></div>
     </footer>
   </main>
 
@@ -300,7 +300,9 @@
     const drawPercent = document.querySelector("#draw-percent");
     const targetZ = -8.25;
     const targetCenterY = 2.28;
+    const totalLevels = 50;
     const maxArrows = 10;
+    let level = 1;
     const gravity = 9.81;
     const pointer = new THREE.Vector2();
     const aimPoint = new THREE.Vector3(0, targetCenterY, targetZ);
@@ -594,14 +596,18 @@
 
     function updateHud() {
       scoreLabel.textContent = String(score).padStart(2, "0");
-      arrowsLabel.textContent = `Arrows · ${arrows}`;
+      arrowsLabel.textContent = `Level ${String(level).padStart(2, "0")} · ${arrows} left`;
       shotDots.replaceChildren(...Array.from({ length: maxArrows }, (_, index) => {
         const dot = document.createElement("i");
         if (index >= arrows) dot.classList.add("used");
         return dot;
       }));
       readyArrow.visible = arrows > 0;
-      if (arrows === 0) showToast(`Round complete · ${score} points`, 2800);
+      if (arrows === 0) {
+        const nextLevel = level >= totalLevels ? 1 : level + 1;
+        const message = level >= totalLevels ? "Campaign complete" : `Level ${String(nextLevel).padStart(2, "0")}`;
+        showToast(message, 2000);
+      }
     }
 
     function showToast(message, duration = 1250) {
@@ -635,12 +641,13 @@
       const offsetX = x;
       const offsetY = y - targetCenterY;
       const radius = Math.hypot(offsetX, offsetY);
-      if (radius > 1.27) return 0;
-      if (radius <= .28) return 10;
-      if (radius <= .58) return 9;
-      if (radius <= .83) return 8;
-      if (radius <= 1.05) return 7;
-      return 6;
+      if (radius > 1.12) return 0;
+      if (radius <= .16) return 10;
+      if (radius <= .29) return 9;
+      if (radius <= .46) return 8;
+      if (radius <= .64) return 7;
+      if (radius <= .88) return 6;
+      return 5;
     }
 
     function burstAt(x, y) {
@@ -667,7 +674,7 @@
         bow.position.z - .18
       );
       const horizontalDistance = Math.hypot(aimPoint.x - start.x, targetZ - start.z);
-      const speed = 17 + power * 18;
+      const speed = 15 + power * 17;
       const flightTime = horizontalDistance / speed;
       const velocity = new THREE.Vector3(
         (aimPoint.x - start.x) / flightTime,
@@ -692,6 +699,9 @@
       const positions = stringGeometry.attributes.position;
       positions.setY(1, 0);
       positions.needsUpdate = true;
+      if (arrows === 0) {
+        setTimeout(() => advanceLevel(), 500);
+      }
       updateHud();
     }
 
@@ -730,6 +740,7 @@
 
     function resetRound() {
       score = 0;
+      level = 1;
       arrows = maxArrows;
       flyingArrows.forEach(({ arrow, trail }) => {
         scene.remove(arrow);
@@ -738,7 +749,7 @@
       flyingArrows = [];
       lastScoreLabel.textContent = "--";
       updateHud();
-      showToast("A fresh round", 900);
+      showToast("Level 01", 900);
     }
 
     document.querySelector("#reset").addEventListener("click", resetRound);
@@ -755,11 +766,25 @@
       if (event.code === "Space") releaseDraw();
     });
 
+    function advanceLevel() {
+      if (level >= totalLevels) {
+        level = 1;
+        score = 0;
+        lastScoreLabel.textContent = "--";
+        showToast("Campaign complete", 1800);
+      } else {
+        level += 1;
+        showToast(`Level ${String(level).padStart(2, "0")}`, 1200);
+      }
+      arrows = maxArrows;
+      updateHud();
+    }
+
     const windValue = document.querySelector("#wind-value");
     const windArrow = document.querySelector("#wind-arrow");
     const windDirection = document.querySelector("#wind-direction");
     function updateWind(time) {
-      wind.value = 2.2 + Math.sin(time * .23) * .9;
+      wind.value = 2.8 + Math.sin(time * .23) * 1.3;
       wind.direction = Math.sin(time * .17) > 0 ? 1 : -1;
       windValue.textContent = `${wind.value.toFixed(1)} m/s`;
       windArrow.textContent = wind.direction > 0 ? "→" : "←";
@@ -834,8 +859,8 @@
       for (const flight of flyingArrows) {
         const previousPosition = flight.arrow.position.clone();
         const previousZ = flight.arrow.position.z;
-        flight.velocity.x += wind.direction * wind.value * .32 * delta;
-        flight.velocity.y -= gravity * delta;
+        flight.velocity.x += wind.direction * wind.value * .42 * delta;
+        flight.velocity.y -= gravity * delta * 1.08;
         flight.arrow.position.addScaledVector(flight.velocity, delta);
         const direction = flight.velocity.clone().normalize();
         flight.arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
