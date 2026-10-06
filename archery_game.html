@@ -558,43 +558,50 @@
     bow.rotation.y = Math.PI / 2;
     scene.add(bow);
 
-    const bowWood = new THREE.MeshStandardMaterial({ color: 0x8a603d, roughness: .36, metalness: .12 });
-    const bowWoodDark = new THREE.MeshStandardMaterial({ color: 0x513a29, roughness: .54, metalness: .14 });
-    const bowWoodHighlight = new THREE.MeshStandardMaterial({ color: 0xd3a367, roughness: .38, metalness: .18 });
+    const bowWood = new THREE.MeshStandardMaterial({ color: 0x8a603d, roughness: .34, metalness: .12 });
+    const bowWoodDark = new THREE.MeshStandardMaterial({ color: 0x513a29, roughness: .57, metalness: .18 });
+    const bowWoodHighlight = new THREE.MeshStandardMaterial({ color: 0xd7b781, roughness: .32, metalness: .22 });
     const bowGripMaterial = new THREE.MeshStandardMaterial({ color: 0x4a3529, roughness: .92 });
-    const bowWrapMaterial = new THREE.MeshStandardMaterial({ color: 0x6b4b37, roughness: .82 });
-    const grip = new THREE.Mesh(new THREE.CylinderGeometry(.14, .19, .95, 20), bowGripMaterial);
+    const bowWrapMaterial = new THREE.MeshStandardMaterial({ color: 0x6b4b37, roughness: .8 });
+    const bowTrimMaterial = new THREE.MeshStandardMaterial({ color: 0x9b7347, roughness: .56, metalness: .08 });
+
+    const grip = new THREE.Mesh(new THREE.CylinderGeometry(.14, .19, .95, 22), bowGripMaterial);
     grip.rotation.z = Math.PI / 2;
     grip.position.set(-.04, 0, .08);
     bow.add(grip);
 
-    const gripWrap = new THREE.Mesh(new THREE.TorusGeometry(.17, .045, 12, 28, Math.PI * 1.8), bowWrapMaterial);
+    const gripWrap = new THREE.Mesh(new THREE.TorusGeometry(.18, .045, 12, 28, Math.PI * 1.9), bowWrapMaterial);
     gripWrap.rotation.y = Math.PI / 2;
     gripWrap.rotation.z = Math.PI / 2;
     gripWrap.position.set(-.04, 0, .08);
     bow.add(gripWrap);
 
+    const gripBand = new THREE.Mesh(new THREE.CylinderGeometry(.11, .11, .3, 16), bowTrimMaterial);
+    gripBand.rotation.z = Math.PI / 2;
+    gripBand.position.set(-.04, 0, .12);
+    bow.add(gripBand);
+
     const upperCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(.04, -.96, .03), new THREE.Vector3(-.10, -.78, -.02),
-      new THREE.Vector3(-.26, -.44, -.10), new THREE.Vector3(-.34, 0, -.18),
-      new THREE.Vector3(-.24, .38, -.09), new THREE.Vector3(-.12, .74, -.02),
-      new THREE.Vector3(.04, .96, .03)
+      new THREE.Vector3(.02, -.98, .02), new THREE.Vector3(-.10, -.82, -.04),
+      new THREE.Vector3(-.24, -.56, -.12), new THREE.Vector3(-.38, -.14, -.2),
+      new THREE.Vector3(-.36, .18, -.16), new THREE.Vector3(-.20, .62, -.08),
+      new THREE.Vector3(.02, .98, .02)
     ]);
     const lowerCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(.04, .96, -.03), new THREE.Vector3(-.10, .78, .02),
-      new THREE.Vector3(-.26, .44, .10), new THREE.Vector3(-.34, 0, .18),
-      new THREE.Vector3(-.24, -.38, .09), new THREE.Vector3(-.12, -.74, .02),
-      new THREE.Vector3(.04, -.96, -.03)
+      new THREE.Vector3(.02, .98, -.02), new THREE.Vector3(-.10, .82, .04),
+      new THREE.Vector3(-.24, .56, .12), new THREE.Vector3(-.38, .14, .2),
+      new THREE.Vector3(-.36, -.18, .16), new THREE.Vector3(-.20, -.62, .08),
+      new THREE.Vector3(.02, -.98, -.02)
     ]);
 
-    const upperLimb = new THREE.Mesh(new THREE.TubeGeometry(upperCurve, 34, .058, 10, false), bowWood);
-    const lowerLimb = new THREE.Mesh(new THREE.TubeGeometry(lowerCurve, 34, .058, 10, false), bowWood);
-    const upperCore = new THREE.Mesh(new THREE.TubeGeometry(upperCurve, 24, .022, 8, false), bowWoodDark);
-    const lowerCore = new THREE.Mesh(new THREE.TubeGeometry(lowerCurve, 24, .022, 8, false), bowWoodDark);
-    const upperAccent = new THREE.Mesh(new THREE.TubeGeometry(upperCurve, 28, .012, 8, false), bowWoodHighlight);
-    const lowerAccent = new THREE.Mesh(new THREE.TubeGeometry(lowerCurve, 28, .012, 8, false), bowWoodHighlight);
-    upperAccent.position.z = -.02;
-    lowerAccent.position.z = .02;
+    const upperLimb = new THREE.Mesh(new THREE.TubeGeometry(upperCurve, 48, .063, 12, false), bowWood);
+    const lowerLimb = new THREE.Mesh(new THREE.TubeGeometry(lowerCurve, 48, .063, 12, false), bowWood);
+    const upperCore = new THREE.Mesh(new THREE.TubeGeometry(upperCurve, 30, .024, 10, false), bowWoodDark);
+    const lowerCore = new THREE.Mesh(new THREE.TubeGeometry(lowerCurve, 30, .024, 10, false), bowWoodDark);
+    const upperAccent = new THREE.Mesh(new THREE.TubeGeometry(upperCurve, 32, .013, 8, false), bowWoodHighlight);
+    const lowerAccent = new THREE.Mesh(new THREE.TubeGeometry(lowerCurve, 32, .013, 8, false), bowWoodHighlight);
+    upperAccent.position.z = -.018;
+    lowerAccent.position.z = .018;
     upperLimb.castShadow = true;
     lowerLimb.castShadow = true;
     upperCore.castShadow = true;
@@ -603,27 +610,59 @@
     lowerAccent.castShadow = true;
     bow.add(upperLimb, lowerLimb, upperCore, lowerCore, upperAccent, lowerAccent);
 
-    const plateLeft = new THREE.Mesh(new THREE.BoxGeometry(.18, 1.54, .06), new THREE.MeshStandardMaterial({ color: 0x8a6a4d, roughness: .56, metalness: .08 }));
+    const plateLeft = new THREE.Mesh(
+      new THREE.BoxGeometry(.18, 1.58, .08),
+      new THREE.MeshStandardMaterial({ color: 0x8a6a4d, roughness: .5, metalness: .1 })
+    );
     const plateRight = plateLeft.clone();
     plateLeft.position.set(-.17, 0, .14);
     plateRight.position.set(-.17, 0, -.14);
+    plateLeft.castShadow = true;
+    plateRight.castShadow = true;
     bow.add(plateLeft, plateRight);
+
+    const centerCore = new THREE.Mesh(
+      new THREE.BoxGeometry(.14, .42, .16),
+      new THREE.MeshStandardMaterial({ color: 0x71513a, roughness: .62, metalness: .08 })
+    );
+    centerCore.position.set(-.04, 0, 0);
+    bow.add(centerCore);
 
     const stringGeometry = new THREE.BufferGeometry();
     stringGeometry.setAttribute("position", new THREE.Float32BufferAttribute([
-      .04, -.96, .009,
-      -.18, 0, .17,
-      .04, .96, .009
+      .03, -.98, .011,
+      -.19, 0, .18,
+      .03, .98, .011
     ], 3));
-    const bowString = new THREE.Line(stringGeometry, new THREE.LineBasicMaterial({ color: 0xf0e8d4, linewidth: 2 }));
+    const bowString = new THREE.Line(
+      stringGeometry,
+      new THREE.LineBasicMaterial({ color: 0xf0e8d4, transparent: true, opacity: .95 })
+    );
     bow.add(bowString);
 
+    const stringHighlight = new THREE.Line(
+      new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute([
+        .026, -.95, .02,
+        -.18, 0, .18,
+        .026, .95, .02
+      ], 3)),
+      new THREE.LineBasicMaterial({ color: 0xb9a98c, transparent: true, opacity: .7 })
+    );
+    bow.add(stringHighlight);
+
     const stringNock = new THREE.Mesh(
-      new THREE.SphereGeometry(.055, 12, 10),
+      new THREE.SphereGeometry(.058, 14, 12),
       new THREE.MeshStandardMaterial({ color: 0xe9dcc0, roughness: .35, metalness: .28 })
     );
-    stringNock.position.set(-.18, 0, .17);
+    stringNock.position.set(-.19, 0, .18);
     bow.add(stringNock);
+
+    const nockingPoint = new THREE.Mesh(
+      new THREE.BoxGeometry(.1, .12, .05),
+      new THREE.MeshStandardMaterial({ color: 0x8e6846, roughness: .7, metalness: .12 })
+    );
+    nockingPoint.position.set(-.17, 0, .12);
+    bow.add(nockingPoint);
 
     const bowState = { tension: 0, aimX: 0, aimY: 0 };
 
