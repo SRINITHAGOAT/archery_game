@@ -558,7 +558,7 @@
     scene.add(bow);
 
     const bowVisual = new THREE.Group();
-    bowVisual.rotation.z = -Math.PI / 2;
+    bowVisual.rotation.y = Math.PI / 2;
     bow.add(bowVisual);
 
     const bowWood = new THREE.MeshStandardMaterial({ color: 0x8a603d, roughness: .34, metalness: .12 });
