@@ -554,11 +554,9 @@
 
     const bow = new THREE.Group();
     bow.position.set(-1.05, 1.5, 7.6);
-    bow.rotation.z = .90;
     scene.add(bow);
 
     const bowOrientation = new THREE.Group();
-    bowOrientation.rotation.z = Math.PI / 2;
     bow.add(bowOrientation);
 
     const bowVisual = new THREE.Group();
