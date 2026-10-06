@@ -557,8 +557,12 @@
     bow.rotation.z = .32;
     scene.add(bow);
 
+    const bowOrientation = new THREE.Group();
+    bowOrientation.rotation.z = Math.PI / 2;
+    bow.add(bowOrientation);
+
     const bowVisual = new THREE.Group();
-    bow.add(bowVisual);
+    bowOrientation.add(bowVisual);
 
     const bowWood = new THREE.MeshStandardMaterial({ color: 0x8a603d, roughness: .34, metalness: .12 });
     const bowWoodDark = new THREE.MeshStandardMaterial({ color: 0x513a29, roughness: .57, metalness: .18 });
