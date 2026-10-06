@@ -952,18 +952,35 @@
 
       updateWind(elapsed);
 
-      const bowDirection = new THREE.Vector3()
-        .subVectors(aimPoint, bow.position)
-        .normalize();
-
-      const bowTargetQuaternion = new THREE.Quaternion();
-
-      bowTargetQuaternion.setFromUnitVectors(
-        new THREE.Vector3(0, 0, 1),
-        bowDirection
+      const aimX = THREE.MathUtils.clamp(
+        (aimPoint.x - bow.position.x) * .32,
+        -.7,
+        .7
       );
 
-      bow.quaternion.slerp(bowTargetQuaternion, .12);
+      const aimY = THREE.MathUtils.clamp(
+        (aimPoint.y - bow.position.y) * .12,
+        -.5,
+        .5
+      );
+
+      bow.rotation.z = THREE.MathUtils.lerp(
+        bow.rotation.z,
+        .32 + aimX,
+        .12
+      );
+
+      bow.rotation.x = THREE.MathUtils.lerp(
+        bow.rotation.x,
+        aimY * .3,
+        .12
+      );
+
+      bow.rotation.y = THREE.MathUtils.lerp(
+        bow.rotation.y,
+        aimX * .1,
+        .12
+      );
 
       const tension = drawing
         ? THREE.MathUtils.clamp(
