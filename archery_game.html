@@ -558,7 +558,6 @@
     scene.add(bow);
 
     const bowVisual = new THREE.Group();
-    bowVisual.rotation.y = Math.PI / 2;
     bow.add(bowVisual);
 
     const bowWood = new THREE.MeshStandardMaterial({ color: 0x8a603d, roughness: .34, metalness: .12 });
@@ -789,11 +788,11 @@
       if (arrows <= 0) return;
       arrows -= 1;
       const drawOffset = -.18 - power * .42;
-      const start = new THREE.Vector3(
-        bow.position.x + drawOffset,
-        bow.position.y + .03,
-        bow.position.z - .18
+      const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(bow.quaternion);
+      const start = bow.position.clone().add(
+        forward.clone().multiplyScalar(drawOffset)
       );
+      start.y += .03;
       const horizontalDistance = Math.hypot(aimPoint.x - start.x, targetZ - start.z);
       const speed = 15 + power * 17;
       const flightTime = horizontalDistance / speed;
@@ -953,16 +952,26 @@
 
       updateWind(elapsed);
 
-      const aimOffsetX = THREE.MathUtils.clamp((aimPoint.x - bow.position.x) * .32, -.7, .7);
-      const aimOffsetY = THREE.MathUtils.clamp((aimPoint.y - bow.position.y) * .12, -.5, .5);
-      bow.rotation.z = THREE.MathUtils.lerp(
-        bow.rotation.z,
-        .32 + aimOffsetX,
-        .12
-      );
-      bow.rotation.x = THREE.MathUtils.lerp(bow.rotation.x, aimOffsetY * .3, .12);
+      const bowDirection = new THREE.Vector3()
+        .subVectors(aimPoint, bow.position)
+        .normalize();
 
-      const tension = drawing ? THREE.MathUtils.clamp((performance.now() - drawStarted) / 1250, 0, 1) : bowState.tension;
+      const bowTargetQuaternion = new THREE.Quaternion();
+
+      bowTargetQuaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1),
+        bowDirection
+      );
+
+      bow.quaternion.slerp(bowTargetQuaternion, .12);
+
+      const tension = drawing
+        ? THREE.MathUtils.clamp(
+            (performance.now() - drawStarted) / 1250,
+            0,
+            1
+          )
+        : bowState.tension;
       bowState.tension = THREE.MathUtils.lerp(bowState.tension, tension, .18);
       const stringDraw = -0.18 - bowState.tension * .52;
       const positions = stringGeometry.attributes.position;
@@ -974,9 +983,6 @@
       readyArrow.position.z = bow.position.z - .18 + bowState.tension * .34;
       readyArrow.position.y = bow.position.y + .03;
       readyArrow.lookAt(aimPoint);
-
-      bow.rotation.y = THREE.MathUtils.lerp(bow.rotation.y, aimOffsetX * .1, .1);
-      bow.rotation.x = THREE.MathUtils.lerp(bow.rotation.x, aimOffsetY * .25, .1);
 
       if (pointerInside && !drawing && performance.now() - lastAimTime < 3000) {
         readyArrow.lookAt(aimPoint);
