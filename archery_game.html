@@ -38,7 +38,28 @@
       width: 100%;
       height: 100%;
       isolation: isolate;
-      background: #dce8df;
+      background: linear-gradient(180deg, #dfe9e1 0%, #d1dfd1 52%, #c6d5ba 100%);
+      overflow: hidden;
+    }
+
+    .range::before {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      content: "";
+      background:
+        radial-gradient(circle at 50% 14%, rgba(255, 245, 213, .7), transparent 20%),
+        radial-gradient(circle at 50% 55%, rgba(255, 255, 255, .18), transparent 44%);
+      pointer-events: none;
+    }
+
+    .range::after {
+      position: absolute;
+      inset: -10%;
+      z-index: 0;
+      content: "";
+      background: radial-gradient(circle at center, transparent 43%, rgba(33, 43, 35, .12) 100%);
+      pointer-events: none;
     }
 
     #scene {
@@ -48,6 +69,7 @@
       height: 100%;
       touch-action: none;
       cursor: crosshair;
+      filter: saturate(1.08) contrast(1.02);
     }
 
     .grain {
@@ -335,6 +357,48 @@
     sunlight.shadow.bias = -.0004;
     scene.add(sunlight);
 
+    const sunGlow = new THREE.Mesh(
+      new THREE.SphereGeometry(6, 32, 24),
+      new THREE.MeshBasicMaterial({
+        color: 0xf4e2a9,
+        transparent: true,
+        opacity: .18,
+        side: THREE.BackSide,
+      })
+    );
+    sunGlow.position.set(0, 10, -30);
+    scene.add(sunGlow);
+
+    const cloudMaterial = new THREE.MeshStandardMaterial({
+      color: 0xfefbee,
+      roughness: 1,
+      transparent: true,
+      opacity: .55,
+      metalness: 0,
+    });
+    const cloudGroup = new THREE.Group();
+    const clouds = [];
+    for (let index = 0; index < 6; index++) {
+      const cloud = new THREE.Group();
+      const puffPositions = [
+        [-1.6, 0, 0], [-.45, .35, .2], [.6, .12, .1], [1.8, 0, 0],
+        [-.8, -.2, .15], [.1, -.18, .12], [1.3, -.08, .08]
+      ];
+      puffPositions.forEach(([x, y, z], puffIndex) => {
+        const puff = new THREE.Mesh(
+          new THREE.SphereGeometry(.7 + (puffIndex % 2) * .2, 18, 18),
+          cloudMaterial
+        );
+        puff.position.set(x, y, z);
+        cloud.add(puff);
+      });
+      cloud.position.set(-12 + index * 5.2, 7 + (index % 2) * 1.3, -24 - index * .8);
+      cloud.scale.setScalar(0.9 + (index % 3) * .24);
+      cloudGroup.add(cloud);
+      clouds.push({ cloud, drift: index * 1.6, phase: index * 1.7 });
+    }
+    scene.add(cloudGroup);
+
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(200, 200),
       new THREE.MeshStandardMaterial({ color: 0x73855e, roughness: 1 })
@@ -494,56 +558,71 @@
     bow.rotation.y = Math.PI / 2;
     scene.add(bow);
 
-    const bowWood = new THREE.MeshStandardMaterial({ color: 0x7c563a, roughness: .42, metalness: .08 });
-    const bowWoodDark = new THREE.MeshStandardMaterial({ color: 0x533d2d, roughness: .52, metalness: .12 });
-    const bowGripMaterial = new THREE.MeshStandardMaterial({ color: 0x4a3529, roughness: .9 });
-    const grip = new THREE.Mesh(new THREE.CylinderGeometry(.13, .18, .92, 18), bowGripMaterial);
+    const bowWood = new THREE.MeshStandardMaterial({ color: 0x8a603d, roughness: .36, metalness: .12 });
+    const bowWoodDark = new THREE.MeshStandardMaterial({ color: 0x513a29, roughness: .54, metalness: .14 });
+    const bowWoodHighlight = new THREE.MeshStandardMaterial({ color: 0xd3a367, roughness: .38, metalness: .18 });
+    const bowGripMaterial = new THREE.MeshStandardMaterial({ color: 0x4a3529, roughness: .92 });
+    const bowWrapMaterial = new THREE.MeshStandardMaterial({ color: 0x6b4b37, roughness: .82 });
+    const grip = new THREE.Mesh(new THREE.CylinderGeometry(.14, .19, .95, 20), bowGripMaterial);
     grip.rotation.z = Math.PI / 2;
     grip.position.set(-.04, 0, .08);
     bow.add(grip);
 
+    const gripWrap = new THREE.Mesh(new THREE.TorusGeometry(.17, .045, 12, 28, Math.PI * 1.8), bowWrapMaterial);
+    gripWrap.rotation.y = Math.PI / 2;
+    gripWrap.rotation.z = Math.PI / 2;
+    gripWrap.position.set(-.04, 0, .08);
+    bow.add(gripWrap);
+
     const upperCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(.04, -.96, .02), new THREE.Vector3(-.12, -.78, -.02),
-      new THREE.Vector3(-.28, -.42, -.08), new THREE.Vector3(-.34, 0, -.16),
-      new THREE.Vector3(-.24, .36, -.09), new THREE.Vector3(-.12, .72, -.02),
-      new THREE.Vector3(.04, .96, .02)
+      new THREE.Vector3(.04, -.96, .03), new THREE.Vector3(-.10, -.78, -.02),
+      new THREE.Vector3(-.26, -.44, -.10), new THREE.Vector3(-.34, 0, -.18),
+      new THREE.Vector3(-.24, .38, -.09), new THREE.Vector3(-.12, .74, -.02),
+      new THREE.Vector3(.04, .96, .03)
     ]);
     const lowerCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(.04, .96, -.02), new THREE.Vector3(-.12, .78, .02),
-      new THREE.Vector3(-.28, .42, .08), new THREE.Vector3(-.34, 0, .16),
-      new THREE.Vector3(-.24, -.36, .09), new THREE.Vector3(-.12, -.72, .02),
-      new THREE.Vector3(.04, -.96, -.02)
+      new THREE.Vector3(.04, .96, -.03), new THREE.Vector3(-.10, .78, .02),
+      new THREE.Vector3(-.26, .44, .10), new THREE.Vector3(-.34, 0, .18),
+      new THREE.Vector3(-.24, -.38, .09), new THREE.Vector3(-.12, -.74, .02),
+      new THREE.Vector3(.04, -.96, -.03)
     ]);
+
     const upperLimb = new THREE.Mesh(new THREE.TubeGeometry(upperCurve, 34, .058, 10, false), bowWood);
     const lowerLimb = new THREE.Mesh(new THREE.TubeGeometry(lowerCurve, 34, .058, 10, false), bowWood);
     const upperCore = new THREE.Mesh(new THREE.TubeGeometry(upperCurve, 24, .022, 8, false), bowWoodDark);
     const lowerCore = new THREE.Mesh(new THREE.TubeGeometry(lowerCurve, 24, .022, 8, false), bowWoodDark);
+    const upperAccent = new THREE.Mesh(new THREE.TubeGeometry(upperCurve, 28, .012, 8, false), bowWoodHighlight);
+    const lowerAccent = new THREE.Mesh(new THREE.TubeGeometry(lowerCurve, 28, .012, 8, false), bowWoodHighlight);
+    upperAccent.position.z = -.02;
+    lowerAccent.position.z = .02;
     upperLimb.castShadow = true;
     lowerLimb.castShadow = true;
     upperCore.castShadow = true;
     lowerCore.castShadow = true;
-    bow.add(upperLimb, lowerLimb, upperCore, lowerCore);
+    upperAccent.castShadow = true;
+    lowerAccent.castShadow = true;
+    bow.add(upperLimb, lowerLimb, upperCore, lowerCore, upperAccent, lowerAccent);
 
-    const plateLeft = new THREE.Mesh(new THREE.BoxGeometry(.14, 1.5, .06), new THREE.MeshStandardMaterial({ color: 0x836143, roughness: .62 }));
+    const plateLeft = new THREE.Mesh(new THREE.BoxGeometry(.18, 1.54, .06), new THREE.MeshStandardMaterial({ color: 0x8a6a4d, roughness: .56, metalness: .08 }));
     const plateRight = plateLeft.clone();
-    plateLeft.position.set(-.16, 0, .12);
-    plateRight.position.set(-.16, 0, -.12);
+    plateLeft.position.set(-.17, 0, .14);
+    plateRight.position.set(-.17, 0, -.14);
     bow.add(plateLeft, plateRight);
 
     const stringGeometry = new THREE.BufferGeometry();
     stringGeometry.setAttribute("position", new THREE.Float32BufferAttribute([
-      .04, -.96, .01,
-      -.18, 0, .12,
-      .04, .96, .01
+      .04, -.96, .009,
+      -.18, 0, .17,
+      .04, .96, .009
     ], 3));
     const bowString = new THREE.Line(stringGeometry, new THREE.LineBasicMaterial({ color: 0xf0e8d4, linewidth: 2 }));
     bow.add(bowString);
 
     const stringNock = new THREE.Mesh(
-      new THREE.SphereGeometry(.05, 10, 10),
-      new THREE.MeshStandardMaterial({ color: 0xe9dcc0, roughness: .35, metalness: .22 })
+      new THREE.SphereGeometry(.055, 12, 10),
+      new THREE.MeshStandardMaterial({ color: 0xe9dcc0, roughness: .35, metalness: .28 })
     );
-    stringNock.position.set(-.18, 0, .12);
+    stringNock.position.set(-.18, 0, .17);
     bow.add(stringNock);
 
     const bowState = { tension: 0, aimX: 0, aimY: 0 };
@@ -824,6 +903,12 @@
       requestAnimationFrame(animate);
       const delta = Math.min(clock.getDelta(), .04);
       const elapsed = clock.elapsedTime;
+
+      clouds.forEach(({ cloud, drift, phase }, index) => {
+        cloud.position.x = -12 + index * 5.2 + Math.sin(elapsed * 0.18 + phase) * 2.3 + drift * 0.08;
+        cloud.position.y = 7 + (index % 2) * 1.3 + Math.sin(elapsed * 0.42 + phase) * .18;
+      });
+
       updateWind(elapsed);
 
       const aimOffsetX = THREE.MathUtils.clamp((aimPoint.x - bow.position.x) * .32, -.7, .7);
