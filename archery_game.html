@@ -556,6 +556,8 @@
     bow.position.set(-1.05, 1.5, 7.6);
     bow.rotation.z = .32;
     bow.rotation.y = Math.PI / 2;
+    bow.rotation.z = .32;
+    bow.rotation.y = Math.PI / 2;
     scene.add(bow);
 
     const bowWood = new THREE.MeshStandardMaterial({ color: 0x8a603d, roughness: .34, metalness: .12 });
@@ -952,7 +954,11 @@
 
       const aimOffsetX = THREE.MathUtils.clamp((aimPoint.x - bow.position.x) * .32, -.7, .7);
       const aimOffsetY = THREE.MathUtils.clamp((aimPoint.y - bow.position.y) * .12, -.5, .5);
-      bow.rotation.z = THREE.MathUtils.lerp(bow.rotation.z, .32 + aimOffsetX, .12);
+      bow.rotation.z = THREE.MathUtils.lerp(
+      bow.rotation.z,
+      .32 + aimOffsetX - Math.PI / 2,
+      .12
+    );
       bow.rotation.x = THREE.MathUtils.lerp(bow.rotation.x, aimOffsetY * .3, .12);
 
       const tension = drawing ? THREE.MathUtils.clamp((performance.now() - drawStarted) / 1250, 0, 1) : bowState.tension;
